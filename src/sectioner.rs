@@ -1,5 +1,4 @@
 use crate::atomizer::{Atom, BlockTag, Break};
-use printpdf::Mm;
 use crate::resources::Resources;
 use crate::section::Section;
 use crate::sizer::{SizedAtom, SizedEvent};
@@ -7,6 +6,7 @@ use crate::span::Span;
 use crate::style::Style;
 use crate::util::width_of_text;
 use crate::Config;
+use printpdf::Mm;
 
 pub enum SubsectionType {
     List,
@@ -34,19 +34,19 @@ impl<'res> Sectioner<'res> {
             lines: Vec::new(),
             current_line: Vec::new(),
             current_code_block: Vec::new(),
-            min_x: min_x,
-            max_x: max_x,
+            min_x,
+            max_x,
             subsection: None,
             is_code: false,
             is_alt_text: false,
-            resources: resources,
+            resources,
             cfg: resources.get_config(),
         }
     }
 
     pub fn parse_event(
         &mut self,
-        resources: &Resources,
+        _resources: &Resources,
         event: SizedEvent,
     ) -> Option<SubsectionType> {
         if self.subsection.is_some() {
@@ -54,7 +54,7 @@ impl<'res> Sectioner<'res> {
                 .subsection
                 .take()
                 .expect("Checked if the subsection was `Some`");
-            if let Some(sub_type) = subsection.parse_event(resources, event) {
+            if let Some(sub_type) = subsection.parse_event(_resources, event) {
                 let section = match sub_type {
                     SubsectionType::List => Section::list_item(subsection.get_vec()),
                     SubsectionType::Quote => Section::block_quote(subsection.get_vec()),
@@ -75,7 +75,7 @@ impl<'res> Sectioner<'res> {
                 self.subsection = Some(Box::new(Sectioner::new(
                     self.min_x + self.cfg.list_indentation,
                     self.max_x,
-                    &self.resources,
+                    self.resources,
                 )))
             }
             SizedEvent::EndBlock(BlockTag::ListItem) => return Some(SubsectionType::List),
@@ -85,7 +85,7 @@ impl<'res> Sectioner<'res> {
                 self.subsection = Some(Box::new(Sectioner::new(
                     self.min_x + self.cfg.quote_indentation,
                     self.max_x,
-                    &self.resources,
+                    self.resources,
                 )))
             }
             SizedEvent::EndBlock(BlockTag::BlockQuote) => return Some(SubsectionType::Quote),
@@ -168,7 +168,7 @@ impl<'res> Sectioner<'res> {
     }
 
     pub fn new_line(&mut self) {
-        if self.current_line.len() == 0 {
+        if self.current_line.is_empty() {
             return;
         }
         if self.is_code {
@@ -182,7 +182,7 @@ impl<'res> Sectioner<'res> {
 
     pub fn get_vec(mut self) -> Vec<Section> {
         // Make sure that current_line is put into the output
-        if self.current_line.len() != 0 {
+        if !self.current_line.is_empty() {
             self.lines.push(Section::plain(self.current_line));
         }
         // Check if the last section is a blank-type of section, so that we

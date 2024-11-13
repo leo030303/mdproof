@@ -1,7 +1,7 @@
 use crate::cmark::{Event as ParseEvent, Parser, Tag};
-use std::borrow::Cow;
 use crate::style::{Class, Style};
 use crate::util::{slice_cow_from_idx, slice_cow_till_idx};
+use std::borrow::Cow;
 
 pub struct Atomizer<'src> {
     state: AtomizerState<'src>,
@@ -76,7 +76,7 @@ impl<'src> Atomizer<'src> {
     pub fn new(parser: Parser<'src>) -> Self {
         Atomizer {
             state: AtomizerState::Parsing,
-            parser: parser,
+            parser,
             current_style: Style::default(),
             is_code: false,
             is_alt_text: false,
@@ -211,7 +211,7 @@ impl<'src> Atomizer<'src> {
             ParseEvent::Text(text) => return (None, AtomizerState::Splitting(text)),
 
             ParseEvent::Html(html) => {
-                use quick_xml::{Reader, events::Event as XMLEvent};
+                use quick_xml::{events::Event as XMLEvent, Reader};
                 let mut reader = Reader::from_str(&html);
                 reader.trim_text(true);
                 let mut buf = Vec::new();
@@ -224,14 +224,19 @@ impl<'src> Atomizer<'src> {
                                     Ok(a) => a,
                                     Err(_) => continue,
                                 };
-                                if attr.key == b"style" && &attr.value[..] == b"page-break-after:always;" {
-                                    return (Some(Event::Break(Break::Page)), AtomizerState::Parsing);
+                                if attr.key == b"style"
+                                    && &attr.value[..] == b"page-break-after:always;"
+                                {
+                                    return (
+                                        Some(Event::Break(Break::Page)),
+                                        AtomizerState::Parsing,
+                                    );
                                 }
                             }
                         }
 
                         Ok(XMLEvent::Eof) => break,
-                        _ => {},
+                        _ => {}
                     }
                 }
             }

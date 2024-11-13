@@ -1,8 +1,8 @@
 use crate::atomizer::{Atom, BlockTag, Break, Event as AtomizerEvent};
-use image::GenericImageView;
-use printpdf::Mm;
 use crate::resources::Resources;
 use crate::util::{font_height, width_of_text};
+use image::GenericImageView;
+use printpdf::Mm;
 
 const IMAGE_DPI: f64 = 300.0;
 const WIDTH_IMAGE_NOT_FOUND: Mm = Mm(50.0);
@@ -53,8 +53,8 @@ where
 
                 let sized_atom = SizedAtom {
                     atom: Atom::Text { text, style },
-                    width: width,
-                    height: height,
+                    width,
+                    height,
                 };
                 Some(SizedEvent::SizedAtom(sized_atom))
             }

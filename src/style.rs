@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Style(HashSet<Class>);
 
 #[derive(Debug, Hash, Clone, Eq, PartialEq)]
@@ -27,12 +27,6 @@ impl Style {
 
     pub fn contains(&self, class: &Class) -> bool {
         self.0.contains(class)
-    }
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Style(HashSet::new())
     }
 }
 

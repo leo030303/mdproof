@@ -1,14 +1,14 @@
+use crate::Config;
+use crate::{
+    DEFAULT_BOLD_FONT, DEFAULT_BOLD_ITALIC_FONT, DEFAULT_ITALIC_FONT, DEFAULT_MONO_FONT,
+    DEFAULT_REGULAR_FONT,
+};
 use failure::Error;
 use image::{self, DynamicImage};
 use rusttype::Font;
 use std::collections::{BTreeMap, HashSet};
 use std::io::Read;
 use std::path::PathBuf;
-use crate::Config;
-use crate::{
-    DEFAULT_BOLD_FONT, DEFAULT_BOLD_ITALIC_FONT, DEFAULT_ITALIC_FONT, DEFAULT_MONO_FONT,
-    DEFAULT_REGULAR_FONT,
-};
 
 pub struct Resources {
     root_path: PathBuf,
@@ -42,7 +42,7 @@ impl Resources {
             root_path: config.resources_directory.clone(),
             images: BTreeMap::new(),
             fonts: BTreeMap::new(),
-            config: config,
+            config,
         };
         res.fonts.insert(
             DEFAULT_REGULAR_FONT.into(),
@@ -100,7 +100,7 @@ impl Resources {
 impl SimpleLoader {
     pub fn new(root_path: PathBuf) -> Self {
         Self {
-            root_path: root_path,
+            root_path,
             queued_images: HashSet::new(),
             queued_fonts: HashSet::new(),
         }

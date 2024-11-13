@@ -1,8 +1,8 @@
-use printpdf::Mm;
 use crate::resources::Resources;
-use std::path::PathBuf;
 use crate::style::Style;
 use crate::util::{font_height, width_of_text};
+use printpdf::Mm;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub enum Span {
@@ -40,17 +40,17 @@ impl Span {
 
     pub fn width(&self, resources: &Resources) -> Mm {
         match self {
-            Span::Text { text, style, .. } => width_of_text(resources, &style, &text).into(),
-            Span::Image { width, .. } => width.clone(),
-            Span::Rect { width, .. } => width.clone(),
+            Span::Text { text, style, .. } => width_of_text(resources, style, text).into(),
+            Span::Image { width, .. } => *width,
+            Span::Rect { width, .. } => *width,
         }
     }
 
     pub fn height(&self, resources: &Resources) -> Mm {
         match self {
-            Span::Text { style, .. } => font_height(resources, &style).into(),
-            Span::Image { height, .. } => height.clone(),
-            Span::Rect { height, .. } => height.clone(),
+            Span::Text { style, .. } => font_height(resources, style).into(),
+            Span::Image { height, .. } => *height,
+            Span::Rect { height, .. } => *height,
         }
     }
 }
