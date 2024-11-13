@@ -46,23 +46,23 @@ impl Resources {
         };
         res.fonts.insert(
             DEFAULT_REGULAR_FONT.into(),
-            Font::from_bytes(REGULAR_FONT).expect("Static font to work"),
+            Font::try_from_bytes(REGULAR_FONT).expect("Static font to work"),
         );
         res.fonts.insert(
             DEFAULT_BOLD_FONT.into(),
-            Font::from_bytes(BOLD_FONT).expect("Static font to work"),
+            Font::try_from_bytes(BOLD_FONT).expect("Static font to work"),
         );
         res.fonts.insert(
             DEFAULT_ITALIC_FONT.into(),
-            Font::from_bytes(ITALIC_FONT).expect("Static font to work"),
+            Font::try_from_bytes(ITALIC_FONT).expect("Static font to work"),
         );
         res.fonts.insert(
             DEFAULT_BOLD_ITALIC_FONT.into(),
-            Font::from_bytes(BOLD_ITALIC_FONT).expect("Static font to work"),
+            Font::try_from_bytes(BOLD_ITALIC_FONT).expect("Static font to work"),
         );
         res.fonts.insert(
             DEFAULT_MONO_FONT.into(),
-            Font::from_bytes(MONO_FONT).expect("Static font to work"),
+            Font::try_from_bytes(MONO_FONT).expect("Static font to work"),
         );
 
         res
@@ -113,7 +113,7 @@ impl SimpleLoader {
         let mut font_file = std::fs::File::open(&filename)?;
         font_file.read_to_end(&mut buffer)?;
 
-        let font = Font::from_bytes(buffer)?;
+        let font = Font::try_from_vec(buffer).expect("Can't find font");
         Ok(font)
     }
 

@@ -20,7 +20,10 @@ mod util;
 
 use crate::cmark::*;
 use failure::Error;
-use printpdf::{Image, Mm, PdfDocument, PdfDocumentReference};
+use printpdf::image_crate::codecs::jpeg::JpegDecoder;
+use printpdf::image_crate::codecs::png::PngDecoder;
+use printpdf::image_crate::codecs::pnm::PnmDecoder;
+use printpdf::{Image, ImageTransform, Mm, PdfDocument, PdfDocumentReference};
 use rusttype::Scale;
 
 use crate::pages::Pages;
@@ -198,24 +201,67 @@ pub fn markdown_to_pdf(markdown: &str, cfg: &Config) -> Result<PdfDocumentRefere
 
                         let font_scale = util::scale_from_style(cfg, &style);
 
-                        current_layer.set_font(font, font_scale.y as i64);
+                        current_layer.set_font(font, font_scale.y);
                         current_layer.write_text(text, font);
                     }
                     Span::Image { path, .. } => {
-                        let image = Image::from_dynamic_image(
-                            resources
-                                .get_image(&path.to_string_lossy())
-                                .expect("image to exist"),
-                        );
-                        image.add_to_layer(
-                            current_layer.clone(),
-                            Some(span.pos.0),
-                            Some(span.pos.1),
-                            None,
-                            None,
-                            None,
-                            None,
-                        );
+                        let image_bytes = resources
+                            .get_image(&path.to_string_lossy())
+                            .expect("image to exist")
+                            .as_bytes();
+                        if let Some(extension) = path.extension().and_then(|os_str| os_str.to_str())
+                        {
+                            let extension = extension.to_lowercase();
+                            if extension.as_str() == "jpg" || extension.as_str() == "jpeg" {
+                                let image_decoder =
+                                    JpegDecoder::new(image_bytes).expect("Error reading image");
+                                let image =
+                                    Image::try_from(image_decoder).expect("Error reading image");
+                                image.add_to_layer(
+                                    current_layer.clone(),
+                                    ImageTransform {
+                                        translate_x: Some(span.pos.0),
+                                        translate_y: Some(span.pos.1),
+                                        rotate: None,
+                                        scale_x: None,
+                                        scale_y: None,
+                                        dpi: None,
+                                    },
+                                );
+                            } else if extension.as_str() == "png" {
+                                let image_decoder =
+                                    PngDecoder::new(image_bytes).expect("Error reading image");
+                                let image =
+                                    Image::try_from(image_decoder).expect("Error reading image");
+                                image.add_to_layer(
+                                    current_layer.clone(),
+                                    ImageTransform {
+                                        translate_x: Some(span.pos.0),
+                                        translate_y: Some(span.pos.1),
+                                        rotate: None,
+                                        scale_x: None,
+                                        scale_y: None,
+                                        dpi: None,
+                                    },
+                                );
+                            } else if extension.as_str() == "pnm" {
+                                let image_decoder =
+                                    PnmDecoder::new(image_bytes).expect("Error reading image");
+                                let image =
+                                    Image::try_from(image_decoder).expect("Error reading image");
+                                image.add_to_layer(
+                                    current_layer.clone(),
+                                    ImageTransform {
+                                        translate_x: Some(span.pos.0),
+                                        translate_y: Some(span.pos.1),
+                                        rotate: None,
+                                        scale_x: None,
+                                        scale_y: None,
+                                        dpi: None,
+                                    },
+                                );
+                            }
+                        }
                     }
                     Span::Rect { width, height } => {
                         use printpdf::{Line, Point};
@@ -225,14 +271,11 @@ pub fn markdown_to_pdf(markdown: &str, cfg: &Config) -> Result<PdfDocumentRefere
                             (Point::new(span.pos.0 + width, span.pos.1), false),
                             (Point::new(span.pos.0, span.pos.1), false),
                         ];
-                        let rect = Line {
+                        let line = Line {
                             points: rect_points,
                             is_closed: true,
-                            has_fill: true,
-                            has_stroke: false,
-                            is_clipping_path: false,
                         };
-                        current_layer.add_shape(rect);
+                        current_layer.add_line(line);
                     }
                 }
                 current_layer.end_text_section();

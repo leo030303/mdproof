@@ -65,8 +65,8 @@ where
                 if let Some(image) = self.resources.get_image(&uri) {
                     let (w, h) = image.dimensions();
                     let (w, h) = (
-                        ::printpdf::Px(w as usize).into_pt(IMAGE_DPI).into(),
-                        ::printpdf::Px(h as usize).into_pt(IMAGE_DPI).into(),
+                        ::printpdf::Px(w as usize).into_pt(IMAGE_DPI as f32).into(),
+                        ::printpdf::Px(h as usize).into_pt(IMAGE_DPI as f32).into(),
                     );
                     let sized_atom = SizedAtom {
                         atom: Atom::Image { uri },

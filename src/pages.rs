@@ -36,7 +36,7 @@ impl<'res> Pages<'res> {
         for section in sections {
             trace!("rendering section: {:?}", section);
             let height = section.min_step(self.resources);
-            let delta_y = height * -self.cfg.line_spacing;
+            let delta_y = height * -(self.cfg.line_spacing as f32);
             if self.current_y + delta_y < min_y {
                 self.new_page();
             }

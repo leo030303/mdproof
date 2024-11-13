@@ -1,3 +1,5 @@
+use cmark::TagEnd;
+
 use crate::cmark::{Event as ParseEvent, Parser, Tag};
 use crate::style::{Class, Style};
 use crate::util::{slice_cow_from_idx, slice_cow_till_idx};
@@ -147,39 +149,50 @@ impl<'src> Atomizer<'src> {
     ) -> (Option<Event<'src>>, AtomizerState<'src>) {
         match event {
             ParseEvent::Start(Tag::Strong) => self.current_style.insert(Class::Strong),
-            ParseEvent::End(Tag::Strong) => self.current_style.remove(&Class::Strong),
+            ParseEvent::End(TagEnd::Strong) => self.current_style.remove(&Class::Strong),
             ParseEvent::Start(Tag::Emphasis) => self.current_style.insert(Class::Emphasis),
-            ParseEvent::End(Tag::Emphasis) => self.current_style.remove(&Class::Emphasis),
-            ParseEvent::Start(Tag::Code) => self.current_style.insert(Class::Code),
-            ParseEvent::End(Tag::Code) => self.current_style.remove(&Class::Code),
+            ParseEvent::End(TagEnd::Emphasis) => self.current_style.remove(&Class::Emphasis),
+            ParseEvent::Start(Tag::CodeBlock(_)) => self.current_style.insert(Class::Code),
+            ParseEvent::End(TagEnd::CodeBlock) => self.current_style.remove(&Class::Code),
 
-            ParseEvent::Start(Tag::Rule) => {
+            ParseEvent::Rule => {
                 return (
                     Some(Event::Break(Break::HorizontalRule)),
                     AtomizerState::Parsing,
                 )
             }
-            ParseEvent::End(Tag::Rule) => {}
 
-            ParseEvent::Start(Tag::Header(size)) => {
-                self.current_style.insert(Class::Heading(size as u8))
-            }
-            ParseEvent::End(Tag::Header(size)) => {
+            ParseEvent::Start(Tag::Heading {
+                level: size,
+                id: _id,
+                classes: _classes,
+                attrs: _attrs,
+            }) => self.current_style.insert(Class::Heading(size as u8)),
+            ParseEvent::End(TagEnd::Heading(size)) => {
                 self.current_style.remove(&Class::Heading(size as u8));
                 return (Some(Event::Break(Break::Paragraph)), AtomizerState::Parsing);
             }
 
             ParseEvent::Start(Tag::List(first_number)) => {
                 return (
-                    Some(Event::StartBlock(BlockTag::List(first_number))),
+                    Some(Event::StartBlock(BlockTag::List(
+                        first_number.map(|value| value as usize),
+                    ))),
                     AtomizerState::Parsing,
                 )
             }
-            ParseEvent::End(Tag::List(first_number)) => {
-                return (
-                    Some(Event::EndBlock(BlockTag::List(first_number))),
-                    AtomizerState::Parsing,
-                )
+            ParseEvent::End(TagEnd::List(is_ordered)) => {
+                if is_ordered {
+                    return (
+                        Some(Event::EndBlock(BlockTag::List(Some(1)))),
+                        AtomizerState::Parsing,
+                    );
+                } else {
+                    return (
+                        Some(Event::EndBlock(BlockTag::List(None))),
+                        AtomizerState::Parsing,
+                    );
+                }
             }
 
             ParseEvent::Start(Tag::Item) => {
@@ -188,43 +201,43 @@ impl<'src> Atomizer<'src> {
                     AtomizerState::Parsing,
                 )
             }
-            ParseEvent::End(Tag::Item) => {
+            ParseEvent::End(TagEnd::Item) => {
                 return (
                     Some(Event::EndBlock(BlockTag::ListItem)),
                     AtomizerState::Parsing,
                 )
             }
 
-            ParseEvent::Start(Tag::BlockQuote) => {
+            ParseEvent::Start(Tag::BlockQuote(_)) => {
                 return (
                     Some(Event::StartBlock(BlockTag::BlockQuote)),
                     AtomizerState::Parsing,
                 )
             }
-            ParseEvent::End(Tag::BlockQuote) => {
+            ParseEvent::End(TagEnd::BlockQuote(_)) => {
                 return (
                     Some(Event::EndBlock(BlockTag::BlockQuote)),
                     AtomizerState::Parsing,
                 )
             }
 
-            ParseEvent::Text(text) => return (None, AtomizerState::Splitting(text)),
+            ParseEvent::Text(text) => return (None, AtomizerState::Splitting(text.into())),
 
             ParseEvent::Html(html) => {
                 use quick_xml::{events::Event as XMLEvent, Reader};
                 let mut reader = Reader::from_str(&html);
-                reader.trim_text(true);
-                let mut buf = Vec::new();
+                let reader_config = reader.config_mut();
+                reader_config.trim_text(true);
 
                 loop {
-                    match reader.read_event(&mut buf) {
+                    match reader.read_event() {
                         Ok(XMLEvent::Start(ref e)) => {
                             for attr in e.html_attributes() {
                                 let attr = match attr {
                                     Ok(a) => a,
                                     Err(_) => continue,
                                 };
-                                if attr.key == b"style"
+                                if attr.key == quick_xml::name::QName(b"style")
                                     && &attr.value[..] == b"page-break-after:always;"
                                 {
                                     return (
@@ -241,14 +254,21 @@ impl<'src> Atomizer<'src> {
                 }
             }
 
-            ParseEvent::Start(Tag::Image(uri, _title)) => {
+            ParseEvent::Start(Tag::Image {
+                link_type: _link_type,
+                dest_url,
+                title: _title,
+                id: _id,
+            }) => {
                 self.is_alt_text = true;
                 return (
-                    Some(Event::Atom(Atom::Image { uri })),
+                    Some(Event::Atom(Atom::Image {
+                        uri: dest_url.into(),
+                    })),
                     AtomizerState::Parsing,
                 );
             }
-            ParseEvent::End(Tag::Image(_url, _title)) => {
+            ParseEvent::End(TagEnd::Image) => {
                 self.is_alt_text = false;
             }
 
@@ -261,7 +281,7 @@ impl<'src> Atomizer<'src> {
                     AtomizerState::Parsing,
                 );
             }
-            ParseEvent::End(Tag::CodeBlock(_)) => {
+            ParseEvent::End(TagEnd::CodeBlock) => {
                 self.is_code = false;
                 self.current_style.remove(&Class::Code);
                 return (
@@ -271,7 +291,7 @@ impl<'src> Atomizer<'src> {
             }
 
             ParseEvent::Start(Tag::Paragraph) => {}
-            ParseEvent::End(Tag::Paragraph) => {
+            ParseEvent::End(TagEnd::Paragraph) => {
                 return (Some(Event::Break(Break::Paragraph)), AtomizerState::Parsing)
             }
 

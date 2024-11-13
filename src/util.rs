@@ -1,24 +1,19 @@
-use printpdf::Pt;
 use crate::resources::Resources;
-use rusttype::{Font, Scale};
-use std::borrow::Cow;
 use crate::style::{Class, Style};
 use crate::Config;
+use printpdf::Pt;
+use rusttype::{Font, Scale};
+use std::borrow::Cow;
 
 pub fn width_of_text(resources: &Resources, style: &Style, text: &str) -> Pt {
     let font = font_from_style(resources, style);
     let scale = scale_from_style(resources.get_config(), style);
-    let units_per_em = font.units_per_em() as f64;
-    let glyph_space_width: f64 = font
+    let units_per_em = font.units_per_em() as f32;
+    let glyph_space_width: f32 = font
         .glyphs_for(text.chars())
-        .map(|g| {
-            g.standalone()
-                .get_data()
-                .map(|data| data.unit_h_metrics.advance_width as f64)
-                .unwrap()
-        })
+        .map(|g| g.clone().scaled(scale).h_metrics().advance_width)
         .sum();
-    Pt(glyph_space_width * scale.x as f64 / units_per_em)
+    Pt(glyph_space_width * scale.x / units_per_em)
 }
 
 pub fn font_height(resources: &Resources, style: &Style) -> Pt {
@@ -26,7 +21,7 @@ pub fn font_height(resources: &Resources, style: &Style) -> Pt {
     let scale = scale_from_style(resources.get_config(), style);
     let v_metrics = font.v_metrics(scale);
     let height = (v_metrics.ascent - v_metrics.descent + v_metrics.line_gap) as f64;
-    Pt(height)
+    Pt(height as f32)
 }
 
 pub fn font_from_style<'res>(resources: &'res Resources, style: &Style) -> &'res Font<'res> {

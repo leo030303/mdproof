@@ -6,10 +6,10 @@ edition = "2018"
 
 [dependencies]
 quicli = "0.3"
-pulldown-cmark = "0"
-printpdf = "*"
 rusttype = "*"
-failure = "*"
-quick-xml = "*"
-image = "*"
-log = "*"
+image = "0.25.5"
+log = "0.4.22"
+quick-xml = "0.37.0"
+failure = "0.1.8"
+printpdf = { version = "0.7.0", features = ["embedded_images", "image"] }
+pulldown-cmark = "0.12.2"
